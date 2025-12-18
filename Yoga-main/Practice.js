@@ -1,3 +1,4 @@
+
 let video;
 let poseNet;
 let pose;
@@ -119,7 +120,7 @@ function classifyPose() {
 
 function gotResult(error, results) {
   if (error || !results || results.length === 0) {
-    setTimeout(classifyPose, 200);
+    setTimeout(classifyPose, 300);
     return;
   }
 
@@ -127,15 +128,58 @@ function gotResult(error, results) {
   let confidence = results[0].confidence;
 
   console.log(
-    "TARGET =", targetLabel,
-    "| PRED =", label,
-    "| CONF =", confidence.toFixed(2)
+    "TARGET:", targetLabel,
+    "PRED:", label,
+    "CONF:", confidence.toFixed(2)
   );
 
-  // DO NOTHING ELSE
-  setTimeout(classifyPose, 500);
-}
+  let threshold = 0.65;
+  if (targetLabel === 2) threshold = 0.6;
+  if (targetLabel === 3) threshold = 0.6;
+  if (targetLabel === 4) threshold = 0.65;
+  if (targetLabel === 5) threshold = 0.7;
 
+  const acceptableLabels = {
+    1: ["1"],        // Tadasana
+    2: ["2", "6"],    // Adho Mukho may look like Bhujangasana
+    3: ["3"],
+    4: ["4"],
+    5: ["5"],
+    6: ["6"]
+  };
+
+  if (
+    confidence > threshold &&
+    acceptableLabels[targetLabel].includes(label)
+  ) {
+
+    missCounter = 0;
+    iterationCounter++;
+    timeLeft--;
+
+    document.getElementById("time").textContent =
+      timeLeft < 10 ? `00:0${timeLeft}` : `00:${timeLeft}`;
+
+    if (iterationCounter === 1 && !env.isPlaying()) env.play();
+
+    if (iterationCounter >= 30) {
+      nextPose();
+      return;
+    }
+
+    setTimeout(classifyPose, 1000);
+
+  } else {
+    missCounter++;
+
+    if (missCounter >= 5) {
+      if (!wave.isPlaying()) wave.play();
+      missCounter = 0;
+    }
+
+    setTimeout(classifyPose, 300);
+  }
+}
 
 // ---------------- DRAW ----------------
 
